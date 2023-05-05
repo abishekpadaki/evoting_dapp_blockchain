@@ -48,7 +48,7 @@ async function updateProposalList() {
     const proposalSelect = document.getElementById('proposal-select');
     proposalSelect.innerHTML = '';
 
-    for (let i = 0; i < proposalCount; i++) {
+    for (let i = 1; i <= proposalCount; i++) {
         const proposal = await votingSystem.methods.proposals(i).call();
         const option = document.createElement('option');
         option.value = proposal.id;
@@ -76,9 +76,9 @@ async function main() {
 
         try {
             await votingSystem.methods.registerVoter(voterAddress).send({ from: accounts });
-            console.log('Voter registered successfully');
+            alert('Voter registered successfully');
         } catch (err) {
-            console.error('Error registering voter:', err);
+            alert('Error registering voter:', err);
         }
     });
 
@@ -89,12 +89,12 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
 
     try {
         const createProposalResult = await votingSystem.methods.createProposal(proposalName).send({ from: accounts, gas: 300000 });
-        console.log('Proposal created successfully');
+        alert('Proposal '+proposalName+' created successfully');
         
         // Wait for the transaction receipt and then update the proposal list
         await updateProposalList();
     } catch (err) {
-        console.error('Error creating proposal:', err);
+        alert('Error creating proposal:', err);
     }
 });
 
@@ -106,7 +106,7 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
 
         try {
             await votingSystem.methods.vote(proposalId).send({ from: accounts });
-            console.log('Vote cast successfully');
+            alert('Vote cast successfully');
             updateResults();
         } catch (err) {
             console.error('Error casting vote:', err);
