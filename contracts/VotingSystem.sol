@@ -20,10 +20,15 @@ contract VotingSystem {
     mapping(address => Voter) public voters;
     mapping(uint256 => Proposal) public proposals;
 
+    mapping(uint256 => address) public voterAddresses;
+    uint256 public voterCount;
+
+
     // Events
     event VoterRegistered(address voterAddress);
     event ProposalCreated(uint256 proposalId, string description);
     event VoteCasted(address voter, uint256 proposalId);
+    event ProposalDeleted(uint256 proposalId);
 
     // Constructor
     constructor() {
@@ -40,7 +45,9 @@ contract VotingSystem {
     function registerVoter(address _voterAddress) public onlyAdmin {
         require(!voters[_voterAddress].isRegistered, "Voter is already registered");
 
-        voters[_voterAddress].isRegistered = true;
+        voters[_voterAddress] = Voter(true, false, 0);
+        voterAddresses[voterCount] = _voterAddress;
+        voterCount++;
 
         emit VoterRegistered(_voterAddress);
     }
@@ -52,19 +59,38 @@ contract VotingSystem {
         emit ProposalCreated(proposalsCount, _description);
     }
 
-    function vote(uint256 _proposalId) public {
-        Voter storage voter = voters[msg.sender];
-
-        require(voter.isRegistered, "Voter is not registered");
-        require(!voter.hasVoted, "Voter has already voted");
+    function deleteProposal(uint256 _proposalId) public onlyAdmin {
         require(_proposalId > 0 && _proposalId <= proposalsCount, "Invalid proposal ID");
 
-        voter.hasVoted = true;
-        voter.voteIndex = _proposalId;
+    // Reset the voting power of voters who have voted for the deleted proposal
+    for (uint256 i = 0; i < voterCount; i++) {
+        address voterAddress = voterAddresses[i];
+        Voter storage voter = voters[voterAddress];
+        if (voter.hasVoted && voter.voteIndex == _proposalId) {
+            voter.hasVoted = false;
+            voter.voteIndex = 0;
+        }
+    }
 
+        Proposal storage lastProposal = proposals[proposalsCount];
+        proposals[_proposalId] = lastProposal;
+        delete proposals[proposalsCount];
+        proposalsCount--;
+
+        emit ProposalDeleted(_proposalId);
+    }
+
+    function vote(uint256 _proposalId) public {
+        require(_proposalId > 0 && _proposalId <= proposalsCount, "Invalid proposal ID");
+    require(voters[msg.sender].isRegistered, "Voter is not registered");
+    require(!voters[msg.sender].hasVoted || voters[msg.sender].voteIndex == _proposalId, "Voter has already voted");
+
+    if (!voters[msg.sender].hasVoted) {
+        voters[msg.sender].hasVoted = true;
+        voters[msg.sender].voteIndex = _proposalId;
         proposals[_proposalId].voteCount++;
-
         emit VoteCasted(msg.sender, _proposalId);
+    }
     }
 
     function getResults() public view returns (Proposal[] memory) {
