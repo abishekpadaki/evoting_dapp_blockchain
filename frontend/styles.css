@@ -1,53 +1,162 @@
+@font-face {
+  font-family: 'Univia Nova';
+  src: url('assets/Univa_nova/OTF/UnivaNova-Regular.otf') format('opentype'),
+  url('assets/Univa_nova/TTF/UnivaNova-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
 /* General styles */
 body {
-    background-color: #1a1a1a;
-    font-family: Arial, sans-serif;
-    color: #f0f0f0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  font-family: 'Univia Nova', sans-serif;
+  background-color: #191414;
+  color: darkslategray;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-image: url('assets/purple-abstract-hd-4k-hk.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+  padding: 25px;
+}
+/* Section styles */
+.section {
+  border: 1px solid white;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #F5F5F5;
+}
+
+h2 {
+  margin-top: 2rem;
+  text-align: center;
+  color: #333333;
+}
+h1 {
+  margin-top: 2rem;
+  text-align: center;
+  color: whitesmoke;
+}
+
+span {
+  color: white;
+}
+.row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+
+.column {
+  flex: 1;
+  max-width: 50%;
+  padding: 0 1rem;
+}
+
+#account-selection {
+  text-align: center;
+  color: white;
+}
+/* Buttons */
+button {
+  background-color: #5d34a5;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  font-size: 16px;
+  cursor: pointer;
+  margin: 10px;
+  border-radius: 5px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #69729c;
+}
+
+/* Inputs */
+input[type="text"] {
+  background-color: #222222;
+  border: 1px solid #b49ce4;
+  border-radius: 4px;
+  color: #f5f5f5;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 10px 20px;
+}
+
+input[type="text"]:focus {
+  background-color: #333333;
+  border: 1px solid #69729c;
+  outline: none;
+}
+
+/* Select */
+select {
+  background-color: #222222;
+  border: 1px solid #b49ce4;
+  border-radius: 4px;
+  color: #f5f5f5;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 10px 20px;
+}
+
+select:focus {
+  background-color: #333333;
+  border: 1px solid #69729c;
+  outline: none;
+}
+
+#voting-status {
+  text-align: center;
+}
+
+/* Alert card */
+.alert-card-err {
+  position: fixed;
+  /* bottom: 20px;
+  right: 20px; */
+  background-color: tomato;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 5px;
+  z-index: 100;
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+
+.alert-card-success {
+  position: fixed;
+  /* bottom: 20px;
+  right: 20px; */
+  background-color: seagreen;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 5px;
+  z-index: 100;
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+/* Fade-out animation */
+@keyframes fade-out {
+  0% {
+    opacity: 1;
   }
-  
-  h2 {
-    margin-bottom: 1rem;
+  100% {
+    opacity: 0;
   }
-  
-  /* Inputs and Buttons */
-  input,
-  button,
-  select {
-    background-color: #333;
-    color: #f0f0f0;
-    padding: 8px;
-    border: 1px solid #444;
-    margin: 4px 0;
-    border-radius: 4px;
-    outline: none;
-  }
-  
-  
-  
-  button:hover {
-    background-color: #444;
-    cursor: pointer;
-  }
-  
-  input[type="text"],
-  select {
-    width: 50%;
-    box-sizing: border-box;
-  }
-  
-  /* Results list */
-  #results-list {
-    list-style-type: none;
-    padding: 0;
-  }
-  
-  #results-list li {
-    margin-bottom: 8px;
-    padding: 8px;
-    background-color: #333;
-    border-radius: 4px;
-  }
-  
+}

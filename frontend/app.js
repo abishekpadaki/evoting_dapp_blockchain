@@ -9,12 +9,27 @@ async function init() {
 
   // Get the ABI from the parsed JSON data
     const contractAbi = contractData.abi;
+    try{
     const ganacheUrl = "http://localhost:7545"; // Replace with the URL of your Ganache instance
     web3 = new Web3(new Web3.providers.HttpProvider(ganacheUrl));
-    const contractAddress = '0xaa5d00A7eCC05e9d02241567f96840Be5d2EC00D';
+    const contractAddress = '0xCaA51b9e81eEC1247ad0817F26d0ab2F42F66A6E';
 
     votingSystem = new web3.eth.Contract(contractAbi, contractAddress);
   web3.eth.defaultAccount = (await web3.eth.getAccounts())[0];
+    }
+    catch(err){
+        console.log(err)
+        showAlert("Error Connecting to a Wallet or Service", 'error')
+        document.getElementById('registration-section').style.display = 'none';
+        document.getElementById('create-proposal-section').style.display = 'none';
+        document.getElementById('results-section').style.display = 'none';
+        document.getElementById('delete-proposal-section').style.display = 'none';
+        document.getElementById('account-selection').style.display = 'none';
+        document.getElementById('voting-status-section').style.display = 'none';
+        document.getElementById('main-container').innerHTML = 'No Web Wallet or Service Found. Check If Ganache/Metamask is running';
+
+    
+    }
 }
 
 async function loadAccounts() {
@@ -30,6 +45,10 @@ async function loadAccounts() {
   
     // Set the default account based on the selected option
     web3.eth.defaultAccount = accountSelect.value;
+    const currentAccount = document.getElementById('current-account');
+    currentAccount.textContent = `Current Account: ${web3.eth.defaultAccount}`;
+    // Update the UI based on the selected account
+  await updateAdminUI();
   }
   
 
@@ -52,6 +71,13 @@ async function updateProposalList() {
     const proposalSelect = document.getElementById('proposal-select');
     proposalSelect.innerHTML = '';
 
+    if (proposalCount === '0') {
+        const noOptions = document.createElement('option');
+        noOptions.value = '';
+        noOptions.textContent = 'No Proposals Yet';
+        proposalSelect.appendChild(noOptions);
+      } else {
+
     for (let i = 1; i <= proposalCount; i++) {
         const proposal = await votingSystem.methods.proposals(i).call();
         const option = document.createElement('option');
@@ -61,11 +87,19 @@ async function updateProposalList() {
         proposalSelect.appendChild(option);
     }
 }
+}
 
 async function updateDeleteProposalList() {
     const proposalCount = await votingSystem.methods.proposalsCount().call();
     const deleteProposalSelect = document.getElementById('delete-proposal-select');
     deleteProposalSelect.innerHTML = '';
+
+    if (proposalCount === '0') {
+        const noOptions = document.createElement('option');
+        noOptions.value = '';
+        noOptions.textContent = 'No Proposals Yet';
+        deleteProposalSelect.appendChild(noOptions);
+      } else {
 
     for (let i = 1; i <= proposalCount; i++) {
         const proposal = await votingSystem.methods.proposals(i).call();
@@ -75,6 +109,7 @@ async function updateDeleteProposalList() {
         deleteProposalSelect.appendChild(option);
     }
 }
+}
 
 async function deleteProposal() {
     const proposalId = document.getElementById('delete-proposal-select').value;
@@ -83,9 +118,9 @@ async function deleteProposal() {
     try {
         await votingSystem.methods.deleteProposal(proposalId).send({ from: accounts});
         checkVotingStatus();
-        alert('Proposal deleted successfully');
+        showAlert('Proposal deleted successfully', 'success');
     } catch (err) {
-        console.error('Error deleting proposal:', err);
+        showAlert('Error deleting proposal:'+ err, 'error');
     }
 }
 
@@ -103,15 +138,50 @@ async function checkVotingStatus() {
 
   
 
+async function updateAdminUI() {
+    try{
+    const adminAccount = (await web3.eth.getAccounts())[0] // Replace this with the admin account address
+    console.log(adminAccount)
+    const isAdmin = web3.eth.defaultAccount === adminAccount;
+  
+    document.getElementById('registration-section').style.display = isAdmin ? 'block' : 'none';
+    document.getElementById('create-proposal-section').style.display = isAdmin ? 'block' : 'none';
+    document.getElementById('results-section').style.display = isAdmin ? 'block' : 'none';
+    document.getElementById('delete-proposal-section').style.display = isAdmin ? 'block' : 'none';
+    document.getElementById('voting-status-section').style.display = 'block';
+    }
+    catch(err){
+    console.log(err);
+    }
+  }
 
+function showAlert(message, type, duration = 3000) {
+    // Create the alert card
+    const alertCard = document.createElement('div');
+    alertCard.className = type === 'error' ? 'alert-card-err' : 'alert-card-success';
+    alertCard.textContent = message;
+  
+    // Append the alert card to the body
+    document.body.appendChild(alertCard);
+  
+    // Remove the alert card after a specified duration with a fade-out animation
+    setTimeout(() => {
+      alertCard.style.animation = `fade-out 0.5s forwards`;
+      setTimeout(() => {
+        document.body.removeChild(alertCard);
+      }, 500);
+    }, duration);
+  }
 
-
+  
 async function main() {
     await init();
     await loadAccounts();
 
-    document.getElementById("account-select").addEventListener("change", (event) => {
+    document.getElementById("account-select").addEventListener("change", async(event) => {
         web3.eth.defaultAccount = event.target.value;
+        checkVotingStatus();
+        updateAdminUI();
       });
       
     // Register Voter
@@ -121,7 +191,7 @@ async function main() {
 
         try {
             await votingSystem.methods.registerVoter(voterAddress).send({ from: accounts, gas: 300000 });
-            alert('Voter registered successfully');
+            showAlert('Voter registered successfully','success');
         } catch (err) {
             console.log(err);
         }
@@ -136,14 +206,14 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
     try {
         await votingSystem.methods.createProposal(proposalName).send({ from: accounts, gas: 300000 });
         checkVotingStatus();
-        alert('Proposal '+proposalName+' created successfully');
+        showAlert('Proposal '+proposalName+' created successfully', 'success');
         
         // Wait for the transaction receipt and then update the proposal list
         await updateProposalList();
         await updateDeleteProposalList();
 
     } catch (err) {
-        alert('Error creating proposal:', err);
+        showAlert('Error creating proposal:'+ err, 'error');
     }
 });
 
@@ -157,12 +227,12 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
         const voter = await votingSystem.methods.voters(accounts).call();
 
         if (voter.hasVoted) {
-            alert('Your vote has already been cast.');
+            showAlert('Your vote has already been cast!','error');
         } else {
         try {
             await votingSystem.methods.vote(proposalId).send({ from: accounts });
             checkVotingStatus();
-            alert("Successfully voted for the proposal "+proposalName)
+            showAlert("Successfully voted for the proposal "+proposalName, 'success')
             updateResults();
         } catch (err) {
             console.error('Error casting vote:', err);

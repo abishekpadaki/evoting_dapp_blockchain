@@ -9,40 +9,81 @@
   <title>Decentralized Voting System</title>
 </head>
 <body>
-  <!-- Add UI elements and scripts here -->
-  <!-- Voter Registration -->
-  <h2>Account Selection</h2>
-  <select id="account-select">
-    <!-- The account options will be populated dynamically -->
-  </select>
-<h2>Voter Registration</h2>
-<label for="voter-address">Voter Address:</label>
-<input type="text" id="voter-address" placeholder="Enter the voter's Ethereum address">
-<button id="register-voter-btn">Register Voter</button>
+  <div class="row">
+  <h1>ConcensusCast</h1>
+  </div>
+  <div class="row">
+  <div class="" id="account-selection">
+    <!-- Account Selection -->
+    <div id="current-account"></div>
+    <button id="change-account-btn">Change Account</button>
+    <select id="account-select" hidden>
+      <!-- The account options will be populated dynamically -->
+    </select>
+  </div>
+</div>
 
-<!-- Proposal Creation -->
-<h2>Create Proposal</h2>
-<label for="proposal-name">Proposal Name:</label>
-<input type="text" id="proposal-name" placeholder="Enter the proposal name">
-<button id="create-proposal-btn">Create Proposal</button>
+  <div class="container" id="main-container">
+    <div class="row">
+      <!-- Voter Registration -->
+      <div class="column section" id="registration-section">
+        <h2>Voter Registration</h2>
+        <label for="voter-address">Voter Address:</label>
+        <input type="text" id="voter-address" placeholder="Enter the voter's Ethereum address">
+        <button id="register-voter-btn">Register Voter</button>
+      </div>
 
-<!-- Voting Status -->
-<h2>Voting Status</h2>
-<p id="voting-status"></p>
+      <!-- Proposal Creation -->
+      <div class="column section" id="create-proposal-section">
+        <h2>Create Proposal</h2>
+        <label for="proposal-name">Proposal Name:</label>
+        <input type="text" id="proposal-name" placeholder="Enter the proposal name">
+        <button id="create-proposal-btn">Create Proposal</button>
+      </div>
+    </div>
 
-<!-- Voting -->
-<h2>Cast Your Vote</h2>
-<select id="proposal-select"></select>
-<button id="cast-vote-btn">Vote</button>
+    <div class="row">
+      <div class="column section" id="voting-status-section">
+        <!-- Voting Status -->
+        <h2>Voting Status</h2>
+        <h3 id="voting-status"></h3>
 
-<!-- Results -->
-<h2>Results</h2>
-<ul id="results-list"></ul>
+        <!-- Voting -->
+        <h2>Cast Your Vote</h2>
+        <select id="proposal-select"></select>
+        <button id="cast-vote-btn">Vote</button>
+      </div>
 
-<!-- Delete Proposal -->
-<h2>Delete Proposal</h2>
-<select id="delete-proposal-select"></select>
-<button id="delete-proposal-btn">Delete Proposal</button>
+      <!-- Results -->
+      <div class="column section" id="results-section">
+        <h2>Results</h2>
+        <ul id="results-list"></ul>
+      </div>
+    </div>
+
+    <!-- Delete Proposal -->
+    <div class="section" id="delete-proposal-section">
+      <h2>Delete Proposal</h2>
+      <select id="delete-proposal-select"></select>
+      <button id="delete-proposal-btn">Delete Proposal</button>
+    </div>
+  </div>
+
+  <script>
+    const accountSelect = document.getElementById('account-select');
+    const currentAccount = document.getElementById('current-account');
+    const changeAccountBtn = document.getElementById('change-account-btn');
+
+    changeAccountBtn.addEventListener('click', () => {
+      accountSelect.hidden = !accountSelect.hidden;
+    });
+
+    accountSelect.addEventListener('change', (event) => {
+      web3.eth.defaultAccount = event.target.value;
+      checkVotingStatus();
+      currentAccount.textContent = `Current Account: ${event.target.value}`;
+      accountSelect.hidden = true;
+    });
+  </script>
 </body>
 </html>
-
