@@ -17,6 +17,10 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
 }
+button:disabled {
+  background-color: #cccccc;
+  color: #888888;
+}
 
 .container {
   display: flex;

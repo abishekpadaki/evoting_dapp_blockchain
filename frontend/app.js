@@ -1,5 +1,7 @@
 let web3;
 let votingSystem;
+let timerInterval;
+let totalVotesRevealed = 0;
 
 
 async function init() {
@@ -12,7 +14,7 @@ async function init() {
     try{
     const ganacheUrl = "http://localhost:7545"; // Replace with the URL of your Ganache instance
     web3 = new Web3(new Web3.providers.HttpProvider(ganacheUrl));
-    const contractAddress = '0xCaA51b9e81eEC1247ad0817F26d0ab2F42F66A6E';
+    const contractAddress = '0xE4091C2020323BB68450FB988A558e02c65DEE49';
 
     votingSystem = new web3.eth.Contract(contractAbi, contractAddress);
   web3.eth.defaultAccount = (await web3.eth.getAccounts())[0];
@@ -53,6 +55,9 @@ async function loadAccounts() {
   
 
 async function updateResults() {
+    const currentTime = Math.floor(new Date().getTime() / 1000);
+    const votingDeadline = await votingSystem.methods.resultTime().call();
+
     const proposalCount = await votingSystem.methods.proposalsCount().call();
     const resultsList = document.getElementById('results-list');
     resultsList.innerHTML = '';
@@ -63,6 +68,7 @@ async function updateResults() {
         listItem.textContent = `${proposal.description}: ${proposal.voteCount} votes`;
         resultsList.appendChild(listItem);
     }
+
 }
 
 // Update Proposal List
@@ -173,6 +179,70 @@ function showAlert(message, type, duration = 3000) {
     }, duration);
   }
 
+  async function displayTimeRemaining() {
+    try {
+        const resultTime = await votingSystem.methods.resultTime().call();
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeRemaining = resultTime - currentTime;
+    
+        if (timeRemaining > 0) {
+          const formattedTimeRemaining = moment.duration(timeRemaining, "seconds").format("h:mm:ss", { trim: false });
+          document.getElementById("time-remaining").innerText = formattedTimeRemaining;
+        } else {
+          clearInterval(timerInterval);
+          document.getElementById("time-remaining").innerText = "Voting has ended.";
+          document.getElementById('cast-vote-btn').disabled = true;
+          document.getElementById('reveal-vote-btn').disabled = false;
+          document.getElementById('end-voting').disabled = false;
+          await updateResults(); // Update the results when the voting period is over
+          const currentPhase = await votingSystem.methods.currentPhase().call();
+          console.log(currentPhase)
+          if (currentPhase == "1") { // "1" would be the value for the Reveal phase
+            await endVotingPeriod(); 
+          }
+        }
+      } catch (error) {
+        console.error("Error updating timer:", error);
+      }
+  }
+
+  async function getWinningProposal() {
+    try {
+      const winningProposalId = await votingSystem.methods.winningProposal().call();
+      const winningProposal = await votingSystem.methods.proposals(winningProposalId).call();
+      console.log(winningProposal)
+      //const winningProposalDesc = await votingSystem.methods.proposals(winningProposal[1]).call();
+      const winningProposalElement = document.getElementById("winning-proposal");
+      winningProposalElement.textContent = `Winning Proposal: ${winningProposal[1]}`;
+      showAlert(`The Winning proposal with ${winningProposal[2]} votes is: ${winningProposal[1]}`,'success')
+    } catch (error) {
+      console.error("Error getting winning proposal:", error);
+    }
+  }
+
+  async function checkAllVotesRevealed() {
+    const totalVoters = await votingSystem.methods.voterCount().call();
+    console.log(totalVoters, totalVotesRevealed)
+
+    if(parseInt(totalVoters) === parseInt(totalVotesRevealed)) {
+        document.getElementById('reveal-vote-btn').disabled = true;
+        document.getElementById('end-voting').disabled = false;
+        
+        showAlert("Voting has ended, Waiting for admin to end voting.", 'success');
+        
+    }
+}
+
+  async function endVotingPeriod() {
+    // Implement this function to call the method that ends the voting period in your contract
+    const accounts = await web3.eth.defaultAccount;
+    try {
+        await votingSystem.methods.endVoting().send({ from: accounts });
+    } catch (error) {
+        console.error("Error ending voting period:", error);
+    }
+}
+
   
 async function main() {
     await init();
@@ -191,11 +261,30 @@ async function main() {
 
         try {
             await votingSystem.methods.registerVoter(voterAddress).send({ from: accounts, gas: 300000 });
+            // Check the number of registered voters and start the commit phase if there are 5 or more
+            const registeredVotersCount = await votingSystem.methods.voterCount().call();
             showAlert('Voter registered successfully','success');
+            if (parseInt(registeredVotersCount) >= 5) {
+              // Start the commit phase
+              showAlert('Commit phase has started', 'success');
+              timerInterval = setInterval(displayTimeRemaining, 1000);
+          }
         } catch (err) {
             console.log(err);
         }
     });
+
+    document.getElementById('end-voting').addEventListener('click', async () => {
+      const accounts = await web3.eth.defaultAccount;
+
+      try {
+        await endVotingPeriod();
+        await getWinningProposal();
+        }
+       catch (err) {
+          console.log(err);
+      }
+  });
     checkVotingStatus();
 
     // Create Proposal
@@ -211,6 +300,7 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
         // Wait for the transaction receipt and then update the proposal list
         await updateProposalList();
         await updateDeleteProposalList();
+        await updateResults();
 
     } catch (err) {
         showAlert('Error creating proposal:'+ err, 'error');
@@ -225,21 +315,45 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
         const proposalName = proposalSelect.options[proposalSelect.selectedIndex].text;
         const accounts = await web3.eth.defaultAccount;
         const voter = await votingSystem.methods.voters(accounts).call();
+        const secret = 'justacastaway'; // This should be the secret used for voting
 
         if (voter.hasVoted) {
             showAlert('Your vote has already been cast!','error');
         } else {
         try {
-            await votingSystem.methods.vote(proposalId).send({ from: accounts });
+            //let combined = `${proposalId}${secret}`
+            //const voteHash = web3.utils.keccak256(combined); // Hashing the proposal ID as the vote
+            let commitHash = web3.utils.soliditySha3(proposalId, secret);
+            await votingSystem.methods.commitVote(commitHash).send({ from: accounts });
+            //localStorage.setItem(`votingSecret_${accounts}`, voteHash);
             checkVotingStatus();
             showAlert("Successfully voted for the proposal "+proposalName, 'success')
-            updateResults();
         } catch (err) {
             console.error('Error casting vote:', err);
         }
     }
     });
 
+    document.getElementById('reveal-vote-btn').addEventListener('click', async () => {
+      const proposalSelect = document.getElementById('proposal-select');
+      const proposalId = proposalSelect.value;
+      const proposalName = proposalSelect.options[proposalSelect.selectedIndex].text;
+      const accounts = await web3.eth.defaultAccount;
+      const secret = 'justacastaway'; // This should be the secret used for voting
+  
+      try {
+          //let commitHash = web3.utils.soliditySha3(proposalId, secret);
+          console.log(proposalId, secret)
+          await votingSystem.methods.revealVote(proposalId, secret).send({ from: accounts });
+          checkVotingStatus();
+          showAlert("Successfully revealed your vote for the proposal " + proposalName, 'success');
+          updateResults();
+          totalVotesRevealed++;
+          await checkAllVotesRevealed();
+      } catch (err) {
+          console.error('Error revealing vote:', err);
+      }
+  });
 
     document.getElementById('delete-proposal-btn').addEventListener('click', async () => {
         await deleteProposal();
@@ -250,10 +364,11 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
     });
 
     // Initialize Proposal List and Results
-    updateProposalList();
-    updateResults();
-    updateDeleteProposalList();
-
+    await updateProposalList();
+    await updateResults();
+    await updateDeleteProposalList();
+    await displayTimeRemaining();
+    timerInterval = setInterval(displayTimeRemaining, 1000); // Update the time remaining every 1 second
 }
 
 document.addEventListener("DOMContentLoaded", main);
