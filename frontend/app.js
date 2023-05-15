@@ -14,7 +14,7 @@ async function init() {
     try{
     const ganacheUrl = "http://localhost:7545"; // Replace with the URL of your Ganache instance
     web3 = new Web3(new Web3.providers.HttpProvider(ganacheUrl));
-    const contractAddress = '0xE4091C2020323BB68450FB988A558e02c65DEE49';
+    const contractAddress = '0x46125fF1cC0cf842e25E0897FF4D4717c40917dC';
 
     votingSystem = new web3.eth.Contract(contractAbi, contractAddress);
   web3.eth.defaultAccount = (await web3.eth.getAccounts())[0];
@@ -59,7 +59,7 @@ async function updateResults() {
     const votingDeadline = await votingSystem.methods.resultTime().call();
 
     const proposalCount = await votingSystem.methods.proposalsCount().call();
-    const resultsList = document.getElementById('results-list');
+    const resultsList = document.getElementById('final-results');
     resultsList.innerHTML = '';
 
     for (let i = 1; i <= proposalCount; i++) {
@@ -212,9 +212,17 @@ function showAlert(message, type, duration = 3000) {
       const winningProposal = await votingSystem.methods.proposals(winningProposalId).call();
       console.log(winningProposal)
       //const winningProposalDesc = await votingSystem.methods.proposals(winningProposal[1]).call();
-      const winningProposalElement = document.getElementById("winning-proposal");
-      winningProposalElement.textContent = `Winning Proposal: ${winningProposal[1]}`;
+      winningProposalText = winningProposal[1];
       showAlert(`The Winning proposal with ${winningProposal[2]} votes is: ${winningProposal[1]}`,'success')
+      document.getElementById('registration-section').style.display = 'none';
+      document.getElementById('create-proposal-section').style.display = 'none';
+      document.getElementById('results-section').style.display = 'none';
+      document.getElementById('delete-proposal-section').style.display = 'none';
+      document.getElementById('voting-status-section').style.display = 'none';
+      document.getElementById('final-section').style.display = 'block';
+      //const winningProposalElement = document.getElementById("winning-proposal");
+      document.getElementById('winning-proposal-text').innerHTML = winningProposalText; 
+
     } catch (error) {
       console.error("Error getting winning proposal:", error);
     }

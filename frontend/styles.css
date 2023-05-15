@@ -22,6 +22,17 @@ button:disabled {
   color: #888888;
 }
 
+#wp-text {
+  font-weight: bold;
+  font-size: 25px;
+}
+
+#winning-proposal-text {
+  font-weight: bold;
+  font-size: 30px;
+  color:#5d34a5;
+}
+
 .container {
   display: flex;
   flex-direction: column;
