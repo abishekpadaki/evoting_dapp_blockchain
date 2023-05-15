@@ -14,7 +14,7 @@ async function init() {
     try{
     const ganacheUrl = "http://localhost:7545"; // Replace with the URL of your Ganache instance
     web3 = new Web3(new Web3.providers.HttpProvider(ganacheUrl));
-    const contractAddress = '0x46125fF1cC0cf842e25E0897FF4D4717c40917dC';
+    const contractAddress = '0x1070a17AC954c43e033C9D994B69d141a95a4202';
 
     votingSystem = new web3.eth.Contract(contractAbi, contractAddress);
   web3.eth.defaultAccount = (await web3.eth.getAccounts())[0];
@@ -266,9 +266,15 @@ async function main() {
     document.getElementById('register-voter-btn').addEventListener('click', async () => {
         const voterAddress = document.getElementById('voter-address').value;
         const accounts = await web3.eth.defaultAccount;
+        // Get the balance of the voter's account
+        let voterStake = await web3.eth.getBalance(voterAddress);
+        let balanceEth = web3.utils.fromWei(voterStake, 'ether');
+        let str = balanceEth.toString();
+        let firstFourDigits = str.replace('.', '').slice(0, 4);
+        console.log(firstFourDigits); // Outputs: '99'
 
         try {
-            await votingSystem.methods.registerVoter(voterAddress).send({ from: accounts, gas: 300000 });
+            await votingSystem.methods.registerVoter(voterAddress, firstFourDigits).send({ from: accounts, gas: 500000 });
             // Check the number of registered voters and start the commit phase if there are 5 or more
             const registeredVotersCount = await votingSystem.methods.voterCount().call();
             showAlert('Voter registered successfully','success');
@@ -352,7 +358,7 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
       try {
           //let commitHash = web3.utils.soliditySha3(proposalId, secret);
           console.log(proposalId, secret)
-          await votingSystem.methods.revealVote(proposalId, secret).send({ from: accounts });
+          await votingSystem.methods.revealVote(proposalId, secret).send({ from: accounts, gas: 300000 });
           checkVotingStatus();
           showAlert("Successfully revealed your vote for the proposal " + proposalName, 'success');
           updateResults();

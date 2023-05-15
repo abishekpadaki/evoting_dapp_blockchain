@@ -18,12 +18,14 @@ contract VotingSystem {
         bool hasVoted;
         uint256 voteIndex;
         bytes32 voteCommit;
+        uint256 stake;
     }
 
     struct Proposal {
         uint256 id;
         string description;
         uint256 voteCount;
+        uint256 totalStake;
     }
 
     mapping(address => Voter) public voters;
@@ -40,7 +42,7 @@ contract VotingSystem {
     event VoteCasted(address voter, uint256 proposalId);
     event VoteRevealed(address voter, uint256 proposalId);
     event ProposalDeleted(uint256 proposalId);
-    event VotingEnded(uint256 winningProposalId, uint256 winningVoteCount);
+    event VotingEnded(uint256 winningProposalId, uint256 winningVoteCount, uint256 winningStake);
 
     // Constructor
     constructor() {
@@ -56,10 +58,11 @@ contract VotingSystem {
 
     // Functions
 
-    function registerVoter(address _voterAddress) public onlyAdmin {
+    function registerVoter(address _voterAddress, uint256 _stake) public onlyAdmin {
         require(!voters[_voterAddress].isRegistered, "Voter is already registered");
+        require(_stake <= msg.sender.balance, "Insufficient balance");
 
-        voters[_voterAddress] = Voter(true, false, 0, "");
+        voters[_voterAddress] = Voter(true, false, 0, "", _stake);
         voterAddresses[voterCount] = _voterAddress;
         voterCount++;
 
@@ -78,7 +81,7 @@ contract VotingSystem {
 
     function createProposal(string memory _description) public onlyAdmin {
         proposalsCount++;
-        proposals[proposalsCount] = Proposal(proposalsCount, _description, 0);
+        proposals[proposalsCount] = Proposal(proposalsCount, _description, 0, 0);
 
         emit ProposalCreated(proposalsCount, _description);
     }
@@ -103,6 +106,7 @@ contract VotingSystem {
         voters[msg.sender].hasVoted = true;
         voters[msg.sender].voteIndex = _proposalId;
         proposals[_proposalId].voteCount++;
+        proposals[_proposalId].totalStake += voters[msg.sender].stake;
 
         emit VoteRevealed(msg.sender, _proposalId);
     }
@@ -166,15 +170,40 @@ contract VotingSystem {
 
         uint256 winningProposalId = 0;
         uint256 winningVoteCount = 0;
+        uint256 winningStake = 0;
+
+        // Store tied proposals
+        uint256[100] memory tiedProposals;
+        uint256 tiedProposalsCount = 0;
 
         for (uint256 i = 1; i <= proposalsCount; i++) {
             if (proposals[i].voteCount > winningVoteCount) {
                 winningVoteCount = proposals[i].voteCount;
                 winningProposalId = i;
+                winningStake = proposals[i].totalStake;
+
+                // Reset tied proposals count
+                tiedProposalsCount = 0;
+            } else if (proposals[i].voteCount == winningVoteCount) {
+                // If we have a tie, add the proposal to the tiedProposals array
+                tiedProposals[tiedProposalsCount] = i;
+                tiedProposalsCount++;
             }
         }
 
-        emit VotingEnded(winningProposalId, winningVoteCount);
+        // If we have more than one proposal with the same vote count, we need to check the stake
+        if (tiedProposalsCount >= 1) {
+            for (uint256 i = 0; i < tiedProposalsCount; i++) {
+                uint256 proposalId = tiedProposals[i];
+                if (proposals[proposalId].totalStake > winningStake) {
+                    winningStake = proposals[proposalId].totalStake;
+                    winningProposalId = proposalId;
+                }
+            }
+        }
+
+
+        emit VotingEnded(winningProposalId, winningVoteCount, winningStake);
         winningProposal = winningProposalId;
     }
 
