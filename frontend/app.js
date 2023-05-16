@@ -14,7 +14,7 @@ async function init() {
     try{
     const ganacheUrl = "http://localhost:7545"; // Replace with the URL of your Ganache instance
     web3 = new Web3(new Web3.providers.HttpProvider(ganacheUrl));
-    const contractAddress = '0x1070a17AC954c43e033C9D994B69d141a95a4202';
+    const contractAddress = '0x51A6cfAE331df622d5E5Eb5b3ACB65dC3CF8F6A0';
 
     votingSystem = new web3.eth.Contract(contractAbi, contractAddress);
   web3.eth.defaultAccount = (await web3.eth.getAccounts())[0];
@@ -89,7 +89,6 @@ async function updateProposalList() {
         const option = document.createElement('option');
         option.value = proposal.id;
         option.textContent = proposal.description;
-        console.log(proposal)
         proposalSelect.appendChild(option);
     }
 }
@@ -147,7 +146,6 @@ async function checkVotingStatus() {
 async function updateAdminUI() {
     try{
     const adminAccount = (await web3.eth.getAccounts())[0] // Replace this with the admin account address
-    console.log(adminAccount)
     const isAdmin = web3.eth.defaultAccount === adminAccount;
   
     document.getElementById('registration-section').style.display = isAdmin ? 'block' : 'none';
@@ -158,6 +156,7 @@ async function updateAdminUI() {
     }
     catch(err){
     console.log(err);
+    showAlert("Error Updating UI, check console", 'error')
     }
   }
 
@@ -196,13 +195,10 @@ function showAlert(message, type, duration = 3000) {
           document.getElementById('end-voting').disabled = false;
           await updateResults(); // Update the results when the voting period is over
           const currentPhase = await votingSystem.methods.currentPhase().call();
-          console.log(currentPhase)
-          if (currentPhase == "1") { // "1" would be the value for the Reveal phase
-            await endVotingPeriod(); 
-          }
         }
       } catch (error) {
         console.error("Error updating timer:", error);
+        showAlert("Timer Error, check console", 'error')
       }
   }
 
@@ -210,7 +206,6 @@ function showAlert(message, type, duration = 3000) {
     try {
       const winningProposalId = await votingSystem.methods.winningProposal().call();
       const winningProposal = await votingSystem.methods.proposals(winningProposalId).call();
-      console.log(winningProposal)
       //const winningProposalDesc = await votingSystem.methods.proposals(winningProposal[1]).call();
       winningProposalText = winningProposal[1];
       showAlert(`The Winning proposal with ${winningProposal[2]} votes is: ${winningProposal[1]}`,'success')
@@ -225,12 +220,12 @@ function showAlert(message, type, duration = 3000) {
 
     } catch (error) {
       console.error("Error getting winning proposal:", error);
+      showAlert("Error getting winning proposal, check console", 'error')
     }
   }
 
   async function checkAllVotesRevealed() {
     const totalVoters = await votingSystem.methods.voterCount().call();
-    console.log(totalVoters, totalVotesRevealed)
 
     if(parseInt(totalVoters) === parseInt(totalVotesRevealed)) {
         document.getElementById('reveal-vote-btn').disabled = true;
@@ -245,9 +240,10 @@ function showAlert(message, type, duration = 3000) {
     // Implement this function to call the method that ends the voting period in your contract
     const accounts = await web3.eth.defaultAccount;
     try {
-        await votingSystem.methods.endVoting().send({ from: accounts });
+        await votingSystem.methods.endVoting().send({ from: accounts, gas:300000 });
     } catch (error) {
         console.error("Error ending voting period:", error);
+        showAlert("Error ending the voting, check console", 'error')
     }
 }
 
@@ -285,6 +281,7 @@ async function main() {
           }
         } catch (err) {
             console.log(err);
+            showAlert("Error Registering Voter, check console", 'error')
         }
     });
 
@@ -297,6 +294,7 @@ async function main() {
         }
        catch (err) {
           console.log(err);
+          showAlert("Error when ending the voting", 'error')
       }
   });
     checkVotingStatus();
@@ -340,10 +338,11 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
             let commitHash = web3.utils.soliditySha3(proposalId, secret);
             await votingSystem.methods.commitVote(commitHash).send({ from: accounts });
             //localStorage.setItem(`votingSecret_${accounts}`, voteHash);
-            checkVotingStatus();
+            await checkVotingStatus();
             showAlert("Successfully voted for the proposal "+proposalName, 'success')
         } catch (err) {
             console.error('Error casting vote:', err);
+            showAlert("Error When casting a vote", 'error')
         }
     }
     });
@@ -356,8 +355,6 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
       const secret = 'justacastaway'; // This should be the secret used for voting
   
       try {
-          //let commitHash = web3.utils.soliditySha3(proposalId, secret);
-          console.log(proposalId, secret)
           await votingSystem.methods.revealVote(proposalId, secret).send({ from: accounts, gas: 300000 });
           checkVotingStatus();
           showAlert("Successfully revealed your vote for the proposal " + proposalName, 'success');
@@ -366,6 +363,7 @@ document.getElementById('create-proposal-btn').addEventListener('click', async (
           await checkAllVotesRevealed();
       } catch (err) {
           console.error('Error revealing vote:', err);
+          showAlert("Error when revealing vote", 'error')
       }
   });
 
